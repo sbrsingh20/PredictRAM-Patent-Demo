@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import hashlib
+from io import BytesIO
 
 # Function to generate RPS based on Age
 def calculate_rps(age):
@@ -20,6 +20,15 @@ def generate_token(name, rps, var):
     if len(initials) < 5:
         initials = initials.ljust(5, 'X')  # Pad with 'X' if initials are less than 5
     return f"{initials}-{rps}-{var}"
+
+# Function to convert dataframe to Excel file in-memory
+@st.cache_data
+def convert_df_to_excel(dataframe):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        dataframe.to_excel(writer, index=False, sheet_name='Tokens')
+    processed_data = output.getvalue()  # Retrieve the in-memory Excel data
+    return processed_data
 
 # Streamlit App
 st.title("Tokenized Portfolio Risk Management System (PredictRAM)")
@@ -45,13 +54,6 @@ if uploaded_file:
         st.dataframe(df[['Full Name', 'Age', 'RPS', 'Portfolio VaR', 'Token']])
         
         # Downloadable Excel
-        @st.cache_data
-        def convert_df_to_excel(dataframe):
-            output = pd.ExcelWriter('output.xlsx', engine='xlsxwriter')
-            dataframe.to_excel(output, index=False, sheet_name='Tokens')
-            output.save()
-            return output
-
         st.download_button(
             label="Download Results",
             data=convert_df_to_excel(df),
@@ -60,3 +62,5 @@ if uploaded_file:
         )
     else:
         st.error(f"Uploaded file is missing required columns: {', '.join(required_columns)}")
+else:
+    st.info("Please upload an Excel file to proceed.")
